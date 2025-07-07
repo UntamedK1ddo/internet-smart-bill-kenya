@@ -1,0 +1,361 @@
+
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { CreditCard, Plus, Search, Smartphone, Building2, Banknote } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+interface Payment {
+  id: string;
+  customerName: string;
+  amount: number;
+  method: "mpesa" | "bank" | "cash";
+  reference: string;
+  date: string;
+  invoiceId: string;
+  status: "completed" | "pending" | "failed";
+}
+
+const PaymentTracking = () => {
+  const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterMethod, setFilterMethod] = useState("all");
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+
+  // Mock payment data
+  const [payments, setPayments] = useState<Payment[]>([
+    {
+      id: "PAY-001",
+      customerName: "John Kamau",
+      amount: 2500,
+      method: "mpesa",
+      reference: "QA12B3C4D5",
+      date: "2024-01-15",
+      invoiceId: "INV-001",
+      status: "completed"
+    },
+    {
+      id: "PAY-002",
+      customerName: "Mary Wanjiku",
+      amount: 1500,
+      method: "bank",
+      reference: "BNK789456123",
+      date: "2024-01-18",
+      invoiceId: "INV-002",
+      status: "completed"
+    },
+    {
+      id: "PAY-003",
+      customerName: "Peter Otieno",
+      amount: 4000,
+      method: "cash",
+      reference: "CASH-001",
+      date: "2024-01-20",
+      invoiceId: "INV-003",
+      status: "completed"
+    }
+  ]);
+
+  const [newPayment, setNewPayment] = useState({
+    customerName: "",
+    amount: "",
+    method: "mpesa" as "mpesa" | "bank" | "cash",
+    reference: "",
+    invoiceId: ""
+  });
+
+  const handleAddPayment = () => {
+    if (!newPayment.customerName || !newPayment.amount || !newPayment.reference) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const payment: Payment = {
+      id: `PAY-${String(payments.length + 1).padStart(3, '0')}`,
+      customerName: newPayment.customerName,
+      amount: parseInt(newPayment.amount),
+      method: newPayment.method,
+      reference: newPayment.reference,
+      date: new Date().toISOString().split('T')[0],
+      invoiceId: newPayment.invoiceId || `INV-${String(payments.length + 1).padStart(3, '0')}`,
+      status: "completed"
+    };
+
+    setPayments([...payments, payment]);
+    setNewPayment({
+      customerName: "",
+      amount: "",
+      method: "mpesa",
+      reference: "",
+      invoiceId: ""
+    });
+    setIsAddDialogOpen(false);
+
+    toast({
+      title: "Payment Recorded",
+      description: `Payment of KSh ${payment.amount.toLocaleString()} has been successfully recorded.`,
+    });
+  };
+
+  const getMethodIcon = (method: string) => {
+    switch (method) {
+      case "mpesa":
+        return <Smartphone className="w-4 h-4" />;
+      case "bank":
+        return <Building2 className="w-4 h-4" />;
+      case "cash":
+        return <Banknote className="w-4 h-4" />;
+      default:
+        return <CreditCard className="w-4 h-4" />;
+    }
+  };
+
+  const getMethodBadge = (method: string) => {
+    switch (method) {
+      case "mpesa":
+        return <Badge className="bg-green-100 text-green-800">{getMethodIcon(method)} M-PESA</Badge>;
+      case "bank":
+        return <Badge className="bg-blue-100 text-blue-800">{getMethodIcon(method)} Bank Transfer</Badge>;
+      case "cash":
+        return <Badge className="bg-gray-100 text-gray-800">{getMethodIcon(method)} Cash</Badge>;
+      default:
+        return <Badge variant="outline">{method}</Badge>;
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "completed":
+        return <Badge className="bg-green-100 text-green-800">Completed</Badge>;
+      case "pending":
+        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
+      case "failed":
+        return <Badge className="bg-red-100 text-red-800">Failed</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const filteredPayments = payments.filter(payment => {
+    const matchesSearch = payment.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         payment.reference.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesMethod = filterMethod === "all" || payment.method === filterMethod;
+    
+    return matchesSearch && matchesMethod;
+  });
+
+  const totalPayments = filteredPayments.reduce((sum, payment) => sum + payment.amount, 0);
+  const mpesaTotal = payments.filter(p => p.method === "mpesa").reduce((sum, p) => sum + p.amount, 0);
+  const bankTotal = payments.filter(p => p.method === "bank").reduce((sum, p) => sum + p.amount, 0);
+  const cashTotal = payments.filter(p => p.method === "cash").reduce((sum, p) => sum + p.amount, 0);
+
+  return (
+    <div className="space-y-6">
+      {/* Payment Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-green-50">
+          <CardContent className="p-4">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold text-green-700">KSh {totalPayments.toLocaleString()}</h3>
+              <p className="text-sm text-green-600">Total Collected</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-blue-50">
+          <CardContent className="p-4">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold text-blue-700">KSh {mpesaTotal.toLocaleString()}</h3>
+              <p className="text-sm text-blue-600">M-PESA Payments</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-purple-50">
+          <CardContent className="p-4">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold text-purple-700">KSh {bankTotal.toLocaleString()}</h3>
+              <p className="text-sm text-purple-600">Bank Transfers</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gray-50">
+          <CardContent className="p-4">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold text-gray-700">KSh {cashTotal.toLocaleString()}</h3>
+              <p className="text-sm text-gray-600">Cash Payments</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <CreditCard className="w-5 h-5 text-green-600" />
+            <span>Payment Tracking</span>
+          </CardTitle>
+          <CardDescription>
+            Record and track customer payments from M-PESA, bank transfers, and cash
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Search and Filter Section */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search by customer name or reference..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <Select value={filterMethod} onValueChange={setFilterMethod}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Payment method" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Methods</SelectItem>
+                <SelectItem value="mpesa">M-PESA</SelectItem>
+                <SelectItem value="bank">Bank Transfer</SelectItem>
+                <SelectItem value="cash">Cash</SelectItem>
+              </SelectContent>
+            </Select>
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-green-600 hover:bg-green-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Record Payment
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Record New Payment</DialogTitle>
+                  <DialogDescription>
+                    Enter payment details to update customer balance.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="customerName">Customer Name *</Label>
+                    <Input
+                      id="customerName"
+                      value={newPayment.customerName}
+                      onChange={(e) => setNewPayment({...newPayment, customerName: e.target.value})}
+                      placeholder="John Doe"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="amount">Amount (KSh) *</Label>
+                    <Input
+                      id="amount"
+                      type="number"
+                      value={newPayment.amount}
+                      onChange={(e) => setNewPayment({...newPayment, amount: e.target.value})}
+                      placeholder="2500"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="method">Payment Method</Label>
+                    <Select 
+                      value={newPayment.method} 
+                      onValueChange={(value: "mpesa" | "bank" | "cash") => setNewPayment({...newPayment, method: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="mpesa">M-PESA</SelectItem>
+                        <SelectItem value="bank">Bank Transfer</SelectItem>
+                        <SelectItem value="cash">Cash</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="reference">Reference Number *</Label>
+                    <Input
+                      id="reference"
+                      value={newPayment.reference}
+                      onChange={(e) => setNewPayment({...newPayment, reference: e.target.value})}
+                      placeholder="M-PESA code, bank ref, or receipt number"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="invoiceId">Invoice ID (Optional)</Label>
+                    <Input
+                      id="invoiceId"
+                      value={newPayment.invoiceId}
+                      onChange={(e) => setNewPayment({...newPayment, invoiceId: e.target.value})}
+                      placeholder="INV-001"
+                    />
+                  </div>
+                  <Button onClick={handleAddPayment} className="w-full bg-green-600 hover:bg-green-700">
+                    Record Payment
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {/* Payments Table */}
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Payment ID</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Method</TableHead>
+                  <TableHead>Reference</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredPayments.map((payment) => (
+                  <TableRow key={payment.id}>
+                    <TableCell className="font-medium">{payment.id}</TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{payment.customerName}</p>
+                        <p className="text-sm text-gray-500">Invoice: {payment.invoiceId}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      KSh {payment.amount.toLocaleString()}
+                    </TableCell>
+                    <TableCell>{getMethodBadge(payment.method)}</TableCell>
+                    <TableCell className="font-mono text-sm">{payment.reference}</TableCell>
+                    <TableCell>{new Date(payment.date).toLocaleDateString()}</TableCell>
+                    <TableCell>{getStatusBadge(payment.status)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {filteredPayments.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              <CreditCard className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+              <p>No payments found matching your criteria.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default PaymentTracking;
