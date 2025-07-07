@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Plus, Send } from "lucide-react";
+import { Search, Plus, Send, Smartphone } from "lucide-react";
 
 interface PaymentFiltersProps {
   searchTerm: string;
@@ -11,6 +11,7 @@ interface PaymentFiltersProps {
   setFilterMethod: (method: string) => void;
   onAddPayment: () => void;
   onSendPrompt: () => void;
+  onQuickSTKPush?: () => void;
 }
 
 const PaymentFilters = ({
@@ -19,7 +20,8 @@ const PaymentFilters = ({
   filterMethod,
   setFilterMethod,
   onAddPayment,
-  onSendPrompt
+  onSendPrompt,
+  onQuickSTKPush
 }: PaymentFiltersProps) => {
   return (
     <div className="flex flex-col sm:flex-row gap-4">
@@ -48,6 +50,13 @@ const PaymentFilters = ({
         </SelectContent>
       </Select>
       
+      {onQuickSTKPush && (
+        <Button onClick={onQuickSTKPush} className="bg-green-600 hover:bg-green-700">
+          <Smartphone className="w-4 h-4 mr-2" />
+          Quick STK Push
+        </Button>
+      )}
+
       <Button onClick={onSendPrompt} className="bg-blue-600 hover:bg-blue-700">
         <Send className="w-4 h-4 mr-2" />
         Send Payment Prompt

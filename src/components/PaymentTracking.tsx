@@ -7,6 +7,7 @@ import PaymentFilters from "./payment/PaymentFilters";
 import PaymentTable from "./payment/PaymentTable";
 import AddPaymentDialog from "./payment/AddPaymentDialog";
 import PaymentPromptDialog from "./payment/PaymentPromptDialog";
+import QuickSTKPushDialog from "./payment/QuickSTKPushDialog";
 
 interface Payment {
   id: string;
@@ -24,6 +25,7 @@ const PaymentTracking = () => {
   const [filterMethod, setFilterMethod] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isPaymentPromptOpen, setIsPaymentPromptOpen] = useState(false);
+  const [isQuickSTKPushOpen, setIsQuickSTKPushOpen] = useState(false);
 
   // Mock payment data
   const [payments, setPayments] = useState<Payment[]>([
@@ -67,6 +69,10 @@ const PaymentTracking = () => {
     setPayments([...payments, payment]);
   };
 
+  const handleQuickSTKPush = (payment: Payment) => {
+    setPayments([...payments, payment]);
+  };
+
   const filteredPayments = payments.filter(payment => {
     const matchesSearch = payment.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          payment.reference.toLowerCase().includes(searchTerm.toLowerCase());
@@ -101,7 +107,7 @@ const PaymentTracking = () => {
             <span>Payment Tracking</span>
           </CardTitle>
           <CardDescription>
-            Record payments and send mobile money payment prompts to customers
+            Record payments and send mobile money payment prompts to customers. STK Push available for M-PESA (0746098485).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -112,6 +118,7 @@ const PaymentTracking = () => {
             setFilterMethod={setFilterMethod}
             onAddPayment={() => setIsAddDialogOpen(true)}
             onSendPrompt={() => setIsPaymentPromptOpen(true)}
+            onQuickSTKPush={() => setIsQuickSTKPushOpen(true)}
           />
 
           <PaymentTable payments={filteredPayments} />
@@ -129,6 +136,13 @@ const PaymentTracking = () => {
         isOpen={isPaymentPromptOpen}
         onClose={() => setIsPaymentPromptOpen(false)}
         onSendPrompt={handleSendPaymentPrompt}
+        paymentsCount={payments.length}
+      />
+
+      <QuickSTKPushDialog
+        isOpen={isQuickSTKPushOpen}
+        onClose={() => setIsQuickSTKPushOpen(false)}
+        onPaymentCreated={handleQuickSTKPush}
         paymentsCount={payments.length}
       />
     </div>
