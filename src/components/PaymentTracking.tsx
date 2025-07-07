@@ -8,14 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { CreditCard, Plus, Search, Smartphone, Building2, Banknote } from "lucide-react";
+import { CreditCard, Plus, Search, Smartphone, Building2, Banknote, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Payment {
   id: string;
   customerName: string;
   amount: number;
-  method: "mpesa" | "bank" | "cash";
+  method: "mpesa" | "airtel" | "tkash" | "bank" | "cash";
   reference: string;
   date: string;
   invoiceId: string;
@@ -27,6 +27,7 @@ const PaymentTracking = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterMethod, setFilterMethod] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isPaymentPromptOpen, setIsPaymentPromptOpen] = useState(false);
 
   // Mock payment data
   const [payments, setPayments] = useState<Payment[]>([
@@ -65,8 +66,16 @@ const PaymentTracking = () => {
   const [newPayment, setNewPayment] = useState({
     customerName: "",
     amount: "",
-    method: "mpesa" as "mpesa" | "bank" | "cash",
+    method: "mpesa" as "mpesa" | "airtel" | "tkash" | "bank" | "cash",
     reference: "",
+    invoiceId: ""
+  });
+
+  const [paymentPrompt, setPaymentPrompt] = useState({
+    customerName: "",
+    phoneNumber: "",
+    amount: "",
+    method: "mpesa" as "mpesa" | "airtel" | "tkash",
     invoiceId: ""
   });
 
@@ -107,9 +116,51 @@ const PaymentTracking = () => {
     });
   };
 
+  const handleSendPaymentPrompt = () => {
+    if (!paymentPrompt.customerName || !paymentPrompt.phoneNumber || !paymentPrompt.amount) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // In a real implementation, this would integrate with mobile money APIs
+    const payment: Payment = {
+      id: `PAY-${String(payments.length + 1).padStart(3, '0')}`,
+      customerName: paymentPrompt.customerName,
+      amount: parseInt(paymentPrompt.amount),
+      method: paymentPrompt.method,
+      reference: `${paymentPrompt.method.toUpperCase()}-PENDING-${Date.now()}`,
+      date: new Date().toISOString().split('T')[0],
+      invoiceId: paymentPrompt.invoiceId || `INV-${String(payments.length + 1).padStart(3, '0')}`,
+      status: "pending"
+    };
+
+    setPayments([...payments, payment]);
+    setPaymentPrompt({
+      customerName: "",
+      phoneNumber: "",
+      amount: "",
+      method: "mpesa",
+      invoiceId: ""
+    });
+    setIsPaymentPromptOpen(false);
+
+    toast({
+      title: "Payment Request Sent",
+      description: `Payment prompt sent to ${paymentPrompt.phoneNumber} via ${paymentPrompt.method.toUpperCase()}.`,
+    });
+  };
+
   const getMethodIcon = (method: string) => {
     switch (method) {
       case "mpesa":
+        return <Smartphone className="w-4 h-4" />;
+      case "airtel":
+        return <Smartphone className="w-4 h-4" />;
+      case "tkash":
         return <Smartphone className="w-4 h-4" />;
       case "bank":
         return <Building2 className="w-4 h-4" />;
@@ -124,8 +175,12 @@ const PaymentTracking = () => {
     switch (method) {
       case "mpesa":
         return <Badge className="bg-green-100 text-green-800">{getMethodIcon(method)} M-PESA</Badge>;
+      case "airtel":
+        return <Badge className="bg-red-100 text-red-800">{getMethodIcon(method)} Airtel Money</Badge>;
+      case "tkash":
+        return <Badge className="bg-blue-100 text-blue-800">{getMethodIcon(method)} T-Kash</Badge>;
       case "bank":
-        return <Badge className="bg-blue-100 text-blue-800">{getMethodIcon(method)} Bank Transfer</Badge>;
+        return <Badge className="bg-purple-100 text-purple-800">{getMethodIcon(method)} Bank Transfer</Badge>;
       case "cash":
         return <Badge className="bg-gray-100 text-gray-800">{getMethodIcon(method)} Cash</Badge>;
       default:
@@ -157,42 +212,60 @@ const PaymentTracking = () => {
 
   const totalPayments = filteredPayments.reduce((sum, payment) => sum + payment.amount, 0);
   const mpesaTotal = payments.filter(p => p.method === "mpesa").reduce((sum, p) => sum + p.amount, 0);
+  const airtelTotal = payments.filter(p => p.method === "airtel").reduce((sum, p) => sum + p.amount, 0);
+  const tkashTotal = payments.filter(p => p.method === "tkash").reduce((sum, p) => sum + p.amount, 0);
   const bankTotal = payments.filter(p => p.method === "bank").reduce((sum, p) => sum + p.amount, 0);
   const cashTotal = payments.filter(p => p.method === "cash").reduce((sum, p) => sum + p.amount, 0);
 
   return (
     <div className="space-y-6">
       {/* Payment Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <Card className="bg-green-50">
           <CardContent className="p-4">
             <div className="text-center">
-              <h3 className="text-2xl font-bold text-green-700">KSh {totalPayments.toLocaleString()}</h3>
-              <p className="text-sm text-green-600">Total Collected</p>
+              <h3 className="text-lg font-bold text-green-700">KSh {totalPayments.toLocaleString()}</h3>
+              <p className="text-xs text-green-600">Total Collected</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-green-50">
+          <CardContent className="p-4">
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-green-700">KSh {mpesaTotal.toLocaleString()}</h3>
+              <p className="text-xs text-green-600">M-PESA</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-red-50">
+          <CardContent className="p-4">
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-red-700">KSh {airtelTotal.toLocaleString()}</h3>
+              <p className="text-xs text-red-600">Airtel Money</p>
             </div>
           </CardContent>
         </Card>
         <Card className="bg-blue-50">
           <CardContent className="p-4">
             <div className="text-center">
-              <h3 className="text-2xl font-bold text-blue-700">KSh {mpesaTotal.toLocaleString()}</h3>
-              <p className="text-sm text-blue-600">M-PESA Payments</p>
+              <h3 className="text-lg font-bold text-blue-700">KSh {tkashTotal.toLocaleString()}</h3>
+              <p className="text-xs text-blue-600">T-Kash</p>
             </div>
           </CardContent>
         </Card>
         <Card className="bg-purple-50">
           <CardContent className="p-4">
             <div className="text-center">
-              <h3 className="text-2xl font-bold text-purple-700">KSh {bankTotal.toLocaleString()}</h3>
-              <p className="text-sm text-purple-600">Bank Transfers</p>
+              <h3 className="text-lg font-bold text-purple-700">KSh {bankTotal.toLocaleString()}</h3>
+              <p className="text-xs text-purple-600">Bank Transfers</p>
             </div>
           </CardContent>
         </Card>
         <Card className="bg-gray-50">
           <CardContent className="p-4">
             <div className="text-center">
-              <h3 className="text-2xl font-bold text-gray-700">KSh {cashTotal.toLocaleString()}</h3>
-              <p className="text-sm text-gray-600">Cash Payments</p>
+              <h3 className="text-lg font-bold text-gray-700">KSh {cashTotal.toLocaleString()}</h3>
+              <p className="text-xs text-gray-600">Cash Payments</p>
             </div>
           </CardContent>
         </Card>
@@ -205,7 +278,7 @@ const PaymentTracking = () => {
             <span>Payment Tracking</span>
           </CardTitle>
           <CardDescription>
-            Record and track customer payments from M-PESA, bank transfers, and cash
+            Record payments and send mobile money payment prompts to customers
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -229,10 +302,90 @@ const PaymentTracking = () => {
               <SelectContent>
                 <SelectItem value="all">All Methods</SelectItem>
                 <SelectItem value="mpesa">M-PESA</SelectItem>
+                <SelectItem value="airtel">Airtel Money</SelectItem>
+                <SelectItem value="tkash">T-Kash</SelectItem>
                 <SelectItem value="bank">Bank Transfer</SelectItem>
                 <SelectItem value="cash">Cash</SelectItem>
               </SelectContent>
             </Select>
+            
+            {/* Payment Prompt Dialog */}
+            <Dialog open={isPaymentPromptOpen} onOpenChange={setIsPaymentPromptOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-blue-600 hover:bg-blue-700">
+                  <Send className="w-4 h-4 mr-2" />
+                  Send Payment Prompt
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Send Payment Prompt</DialogTitle>
+                  <DialogDescription>
+                    Send a mobile money payment request to customer's phone.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="promptCustomerName">Customer Name *</Label>
+                    <Input
+                      id="promptCustomerName"
+                      value={paymentPrompt.customerName}
+                      onChange={(e) => setPaymentPrompt({...paymentPrompt, customerName: e.target.value})}
+                      placeholder="John Doe"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="phoneNumber">Phone Number *</Label>
+                    <Input
+                      id="phoneNumber"
+                      value={paymentPrompt.phoneNumber}
+                      onChange={(e) => setPaymentPrompt({...paymentPrompt, phoneNumber: e.target.value})}
+                      placeholder="254712345678"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="promptAmount">Amount (KSh) *</Label>
+                    <Input
+                      id="promptAmount"
+                      type="number"
+                      value={paymentPrompt.amount}
+                      onChange={(e) => setPaymentPrompt({...paymentPrompt, amount: e.target.value})}
+                      placeholder="2500"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="promptMethod">Mobile Money Service</Label>
+                    <Select 
+                      value={paymentPrompt.method} 
+                      onValueChange={(value: "mpesa" | "airtel" | "tkash") => setPaymentPrompt({...paymentPrompt, method: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="mpesa">M-PESA</SelectItem>
+                        <SelectItem value="airtel">Airtel Money</SelectItem>
+                        <SelectItem value="tkash">T-Kash</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="promptInvoiceId">Invoice ID (Optional)</Label>
+                    <Input
+                      id="promptInvoiceId"
+                      value={paymentPrompt.invoiceId}
+                      onChange={(e) => setPaymentPrompt({...paymentPrompt, invoiceId: e.target.value})}
+                      placeholder="INV-001"
+                    />
+                  </div>
+                  <Button onClick={handleSendPaymentPrompt} className="w-full bg-blue-600 hover:bg-blue-700">
+                    <Send className="w-4 h-4 mr-2" />
+                    Send Payment Prompt
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="bg-green-600 hover:bg-green-700">
@@ -271,13 +424,15 @@ const PaymentTracking = () => {
                     <Label htmlFor="method">Payment Method</Label>
                     <Select 
                       value={newPayment.method} 
-                      onValueChange={(value: "mpesa" | "bank" | "cash") => setNewPayment({...newPayment, method: value})}
+                      onValueChange={(value: "mpesa" | "airtel" | "tkash" | "bank" | "cash") => setNewPayment({...newPayment, method: value})}
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="mpesa">M-PESA</SelectItem>
+                        <SelectItem value="airtel">Airtel Money</SelectItem>
+                        <SelectItem value="tkash">T-Kash</SelectItem>
                         <SelectItem value="bank">Bank Transfer</SelectItem>
                         <SelectItem value="cash">Cash</SelectItem>
                       </SelectContent>
@@ -289,7 +444,7 @@ const PaymentTracking = () => {
                       id="reference"
                       value={newPayment.reference}
                       onChange={(e) => setNewPayment({...newPayment, reference: e.target.value})}
-                      placeholder="M-PESA code, bank ref, or receipt number"
+                      placeholder="Transaction code or receipt number"
                     />
                   </div>
                   <div>
